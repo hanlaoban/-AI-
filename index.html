@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>培训AI - 智能助手</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4285F4;
+            --bg-color: #f8f9fa;
+            --text-color: #202124;
+            --card-border: #e0e0e0;
+            --transition-speed: 0.5s;
+        }
+
+        body { 
+            margin: 0; font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; 
+            background: var(--bg-color); color: var(--text-color);
+            height: 100vh; overflow: hidden; 
+        }
+
+        #canvas-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+
+        .config-trigger {
+            position: fixed; top: 20px; right: 20px; z-index: 1000;
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: #5f6368; transition: background 0.2s;
+        }
+        .config-trigger:hover { background: rgba(0,0,0,0.1); }
+
+        .app-container {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; height: 100%; width: 100%; box-sizing: border-box;
+            position: relative; transition: all var(--transition-speed) ease;
+        }
+        .app-container.chat-mode { justify-content: flex-start; padding-top: 0; }
+
+        .logo {
+            font-size: 64px; font-weight: 800; margin-bottom: 40px;
+            background: linear-gradient(135deg, #4285F4 0%, #9B72CB 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            transition: all var(--transition-speed) ease; position: relative; z-index: 10;
+            letter-spacing: -2px;
+        }
+        .app-container.chat-mode .logo {
+            font-size: 20px; margin-bottom: 0; position: fixed; top: 20px; left: 24px; z-index: 100;
+        }
+
+        .search-container {
+            width: 100%; max-width: 680px; display: flex; flex-direction: column;
+            align-items: center; position: relative; z-index: 20;
+            transition: all var(--transition-speed) ease;
+        }
+        .app-container.chat-mode .search-container {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 800px;
+        }
+
+        .input-wrapper {
+            width: 100%; background: white; border-radius: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid var(--card-border);
+            display: flex; align-items: center; padding: 10px 20px;
+            box-sizing: border-box; transition: box-shadow 0.3s;
+        }
+        .input-wrapper:hover, .input-wrapper:focus-within { box-shadow: 0 8px 24px rgba(66, 133, 244, 0.15); border-color: var(--primary-color); }
+        .search-input { flex: 1; height: 36px; border: none; background: transparent; font-size: 16px; outline: none; color: #202124; }
+        .send-btn { cursor: pointer; padding: 8px; display: flex; align-items: center; border-radius: 50%; transition: background 0.2s; }
+        .send-btn:hover { background: #f1f3f4; }
+        .send-btn svg { width: 24px; height: 24px; fill: var(--primary-color); }
+
+        .chips-bar { display: flex; gap: 10px; margin-top: 25px; transition: transform 0.3s; }
+        .app-container.chat-mode .chips-bar { margin-top: 10px; transform: scale(0.9); }
+        .chip {
+            padding: 8px 16px; background: rgba(255,255,255,0.9); border: 1px solid var(--card-border);
+            border-radius: 18px; font-size: 14px; color: #5f6368; cursor: pointer;
+            display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        }
+        .chip.active { background: #e8f0fe; color: #1967d2; border-color: #d2e3fc; font-weight: 600; }
+
+        /* 聊天区域 */
+        .chat-area {
+            flex: 1; width: 100%; max-width: 800px; overflow-y: auto; display: none;
+            padding: 80px 24px 160px 24px; box-sizing: border-box; flex-direction: column; gap: 30px;
+        }
+        .app-container.chat-mode .chat-area { display: flex; animation: fadeIn 0.8s ease forwards; }
+
+        .message-row { display: flex; gap: 16px; animation: slideUp 0.3s ease; align-items: flex-start; }
+        
+        /* 头像样式优化 */
+        .avatar {
+            width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .avatar.ai { background: linear-gradient(135deg, #E3F2FD, #FFFFFF); border: 1px solid #BBDEFB; }
+        .avatar.user { background: linear-gradient(135deg, #6A11CB 0%, #2575FC 100%); color: white; }
+        .avatar svg { width: 22px; height: 22px; }
+
+        /* 消息气泡 & Markdown 样式 */
+        .bubble { flex: 1; padding-top: 2px; line-height: 1.7; font-size: 15px; color: #333; min-width: 0; }
+        
+        /* Markdown 样式 */
+        .bubble h1, .bubble h2, .bubble h3 { margin-top: 10px; margin-bottom: 5px; color: #202124; font-size: 16px; font-weight: 700; }
+        .bubble p { margin-bottom: 10px; }
+        .bubble ul, .bubble ol { padding-left: 20px; margin-bottom: 10px; }
+        .bubble li { margin-bottom: 4px; }
+        .bubble strong { color: var(--primary-color); font-weight: 600; }
+        .bubble code { background: #f1f3f4; padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+        .bubble pre { background: #f6f8fa; padding: 10px; border-radius: 8px; overflow-x: auto; }
+
+        /* --- 引用来源卡片样式 (仿 RagFlow) --- */
+        .reference-box {
+            margin-top: 20px; padding-top: 15px; border-top: 1px dashed #e0e0e0;
+            animation: fadeIn 0.5s;
+        }
+        .ref-title { font-size: 13px; font-weight: 700; color: #5f6368; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
+        
+        .ref-list { display: flex; flex-wrap: wrap; gap: 10px; }
+        
+        .ref-card {
+            background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+            padding: 8px 12px; display: flex; align-items: center; gap: 10px;
+            font-size: 13px; color: #3c4043; cursor: pointer;
+            transition: all 0.2s; position: relative; max-width: 100%;
+            text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .ref-card:hover {
+            border-color: var(--primary-color); background: #F8F9FE;
+            box-shadow: 0 4px 8px rgba(66, 133, 244, 0.15); transform: translateY(-1px);
+        }
+        .ref-icon-box {
+            width: 24px; height: 24px; background: #FFEBEE; border-radius: 4px; color: #D32F2F;
+            display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold;
+        }
+        /* PDF specific color */
+        .ref-card[data-type="pdf"] .ref-icon-box { background: #FFEBEE; color: #D32F2F; }
+        .ref-card[data-type="doc"] .ref-icon-box { background: #E3F2FD; color: #1976D2; }
+        
+        .ref-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; font-weight: 500; }
+        .ref-score { font-size: 11px; color: #9aa0a6; margin-left: auto; }
+
+        /* 引用 Tooltip (显示原文片段) */
+        .ref-card .tooltip {
+            visibility: hidden; width: 300px; background-color: #202124; color: #fff;
+            text-align: left; border-radius: 8px; padding: 12px;
+            position: absolute; z-index: 100; bottom: 135%; left: 0;
+            font-size: 12px; line-height: 1.5; opacity: 0; transition: opacity 0.2s;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2); pointer-events: none;
+        }
+        .ref-card .tooltip::after {
+            content: ""; position: absolute; top: 100%; left: 20px;
+            border-width: 6px; border-style: solid; border-color: #202124 transparent transparent transparent;
+        }
+        .ref-card:hover .tooltip { visibility: visible; opacity: 1; }
+
+        /* 弹窗 */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal { background: white; width: 420px; padding: 30px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+        .modal h3 { margin-top: 0; color: #202124; }
+        .modal input { width: 100%; padding: 12px; margin: 8px 0 20px 0; border: 1px solid #dadce0; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        .modal input:focus { border-color: var(--primary-color); outline: none; }
+        
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .chat-area::-webkit-scrollbar { width: 6px; }
+        .chat-area::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 3px; }
+    </style>
+    <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }</script>
+</head>
+<body>
+    <div id="canvas-bg"></div>
+    <div class="config-trigger" onclick="openModal()" title="设置">⚙️</div>
+
+    <div class="app-container" id="app-container">
+        <div class="logo">培训AI助手</div>
+        <div class="chat-area" id="chat-stream"></div>
+        <div class="search-container">
+            <div class="input-wrapper">
+                <input type="text" class="search-input" id="user-input" placeholder="请输入您的问题，例如：金融行业新员工入职培训怎么做？" onkeypress="handleKey(event)">
+                <div class="send-btn" onclick="sendMessage()">
+                    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                </div>
+            </div>
+            <div class="chips-bar">
+                <div class="chip active" onclick="setMode(this, '新员工培训')"><span>🎓</span> 新员工培训</div>
+                <div class="chip" onclick="setMode(this, 'AI制课')"><span>⚡️</span> AI制课</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="config-modal">
+        <div class="modal">
+            <h3>🔌 系统配置</h3>
+            <div class="helper-text">1. API Key (RagFlow)</div>
+            <input type="password" id="api-key" placeholder="ragflow-xxxxxxxx...">
+            <div class="helper-text">2. Chat ID (对话ID)</div>
+            <input type="text" id="api-chat-id" placeholder="例如 732abad8e...">
+            <div class="helper-text">3. Host 地址</div>
+            <input type="text" id="api-host" value="http://localhost:9380">
+            <button onclick="saveConfig()" style="width:100%; padding:12px; background:var(--primary-color); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:15px;">保存连接</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        // 极简粒子背景
+        const scene = new THREE.Scene(); scene.background = new THREE.Color(0xf8f9fa);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000); camera.position.z = 50;
+        const renderer = new THREE.WebGLRenderer({alpha:true, antialias:true}); renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-bg').appendChild(renderer.domElement);
+        const geo = new THREE.BufferGeometry(); const count=200; const pos=new Float32Array(count*3);
+        for(let i=0;i<count*3;i++) pos[i]=(Math.random()-0.5)*100;
+        geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+        const mat = new THREE.PointsMaterial({size:0.6, color:0x4285F4, transparent:true, opacity:0.4});
+        const mesh = new THREE.Points(geo, mat); scene.add(mesh);
+        function animate(){ requestAnimationFrame(animate); mesh.rotation.y+=0.0005; mesh.rotation.x+=0.0002; renderer.render(scene, camera); }
+        animate();
+        window.onresize=()=>{camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);}
+    </script>
+
+    <script>
+        let config = {
+            host: localStorage.getItem('rag_host') || 'http://localhost:9380',
+            apiKey: localStorage.getItem('rag_key') || 'ragflow-3DSKThzR1O1-bj3hBTSJ_MfnA5kSW_lvv9TZZO3IhBU',
+            chatId: localStorage.getItem('rag_chat_id') || '3bbb1240def911f08c3f7a09896ca445',
+            sessionId: ''
+        };
+        let currentMode = "新员工培训"; 
+        let isChatting = false;
+
+        document.getElementById('api-host').value = config.host;
+        document.getElementById('api-key').value = config.apiKey;
+        document.getElementById('api-chat-id').value = config.chatId;
+
+        function openModal() { document.getElementById('config-modal').style.display = 'flex'; }
+        function saveConfig() {
+            config.host = document.getElementById('api-host').value.replace(/\/$/, "");
+            config.apiKey = document.getElementById('api-key').value;
+            config.chatId = document.getElementById('api-chat-id').value.trim();
+            localStorage.setItem('rag_host', config.host);
+            localStorage.setItem('rag_key', config.apiKey);
+            localStorage.setItem('rag_chat_id', config.chatId);
+            document.getElementById('config-modal').style.display = 'none';
+        }
+        function setMode(el, mode) {
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            currentMode = mode;
+            config.sessionId = '';
+        }
+        function handleKey(e) { if(e.key === 'Enter') sendMessage(); }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            if(!text) return;
+            if(!config.apiKey || !config.chatId) { openModal(); return; }
+
+            if(!isChatting) {
+                document.getElementById('app-container').classList.add('chat-mode');
+                isChatting = true;
+            }
+
+            appendMessage('user', text);
+            input.value = '';
+            
+            const msgId = appendMessage('ai', ''); 
+            const bubble = document.querySelector(`#${msgId} .markdown-content`);
+            let references = null;
+            let fullText = "";
+
+            try {
+                const url = `${config.host}/api/v1/chats/${config.chatId}/completions`;
+                const payload = { question: text, stream: true };
+                if(config.sessionId) payload.session_id = config.sessionId;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
+                    body: JSON.stringify(payload)
+                });
+
+                if(!response.ok) throw new Error("连接失败 (检查 ID/Key/CORS)");
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (!trimmed.startsWith('data:')) continue;
+                        try {
+                            const jsonStr = trimmed.substring(5).trim();
+                            if (jsonStr === 'true' || jsonStr === '[DONE]') continue; 
+                            const data = JSON.parse(jsonStr);
+                            
+                            if (data.code === 0 && data.data) {
+                                if (data.data.session_id && !config.sessionId) config.sessionId = data.data.session_id;
+                                
+                                if (data.data.answer) {
+                                    // 核心修改：使用 marked.js 渲染 Markdown
+                                    fullText = data.data.answer;
+                                    bubble.innerHTML = marked.parse(fullText);
+                                    scrollToBottom();
+                                }
+                                if (data.data.reference && Object.keys(data.data.reference).length > 0) {
+                                    references = data.data.reference;
+                                }
+                            }
+                        } catch (e) { console.error(e); }
+                    }
+                }
+
+                if (references && references.doc_aggs) {
+                    renderReferences(document.querySelector(`#${msgId}`), references);
+                }
+
+            } catch (error) {
+                bubble.innerHTML += `<br><span style="color:red">❌ 错误：${error.message}</span>`;
+            }
+        }
+
+        // --- 渲染引用卡片 (点击下载/预览) ---
+        function renderReferences(msgContainer, refs) {
+            const docs = refs.doc_aggs;
+            const chunks = refs.chunks || {};
+            if (!docs || Object.keys(docs).length === 0) return;
+
+            // 构建 dataset_id 映射
+            const docMap = {};
+            for (let cid in chunks) {
+                const c = chunks[cid];
+                if(c.document_id && c.dataset_id) {
+                    docMap[c.document_id] = c.dataset_id;
+                }
+            }
+
+            let html = `
+                <div class="reference-box">
+                    <div class="ref-title">📚 知识库来源 (点击预览)</div>
+                    <div class="ref-list">
+            `;
+            
+            for (let key in docs) {
+                const doc = docs[key]; // { doc_name, doc_id, count }
+                const datasetId = docMap[doc.doc_id];
+                
+                // 查找原文片段 (Tooltip)
+                let snippet = "暂无详细预览";
+                for(let cid in chunks) {
+                    if(chunks[cid].document_id === doc.doc_id) {
+                        snippet = chunks[cid].content_with_weight || chunks[cid].content;
+                        snippet = snippet.substring(0, 180) + "..."; // 截取长度
+                        break;
+                    }
+                }
+
+                // 判断文件类型图标
+                let fileType = "doc";
+                if(doc.doc_name.endsWith('.pdf')) fileType = "pdf";
+                
+                const icon = fileType === 'pdf' ? 'PDF' : 'DOC';
+
+                // 生成卡片
+                // 注意：这里尝试下载，如果是文本会下载txt，如果是二进制由于RAGFlow接口限制可能需鉴权
+                html += `
+                    <div class="ref-card" data-type="${fileType}" onclick="downloadFile('${datasetId}', '${doc.doc_id}', '${doc.doc_name}')">
+                        <div class="ref-icon-box">${icon}</div>
+                        <div class="ref-name">${doc.doc_name}</div>
+                        <div class="ref-score">${doc.count}次引用</div>
+                        <div class="tooltip"><strong>原文片段：</strong><br>${snippet}</div>
+                    </div>`;
+            }
+            html += `</div></div>`;
+            
+            // 将引用框添加到消息底部
+            msgContainer.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        // --- 核心：下载/预览功能 (尝试文本兼容) ---
+        async function downloadFile(datasetId, docId, docName) {
+            if(!datasetId) {
+                alert("文件权限受限，只能查看引用片段。");
+                return;
+            }
+            
+            // 提示用户
+            const toast = document.createElement('div');
+            toast.textContent = "正在获取文件...";
+            toast.style.cssText = "position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:20px;z-index:3000;font-size:14px;";
+            document.body.appendChild(toast);
+
+            try {
+                // RAGFlow API 下载路径
+                const url = `${config.host}/api/v1/datasets/${datasetId}/documents/${docId}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${config.apiKey}` }
+                });
+
+                if(!response.ok) throw new Error("文件请求失败");
+
+                const blob = await response.blob();
+                
+                // 检查 Blob 大小，如果太小可能是空的
+                if (blob.size < 10) {
+                    throw new Error("文件内容为空 (可能仅支持文本预览)");
+                }
+
+                const objectUrl = window.URL.createObjectURL(blob);
+                
+                // 自动触发下载
+                const a = document.createElement('a');
+                a.href = objectUrl;
+                a.download = docName; // 强制下载文件名
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                
+                setTimeout(() => window.URL.revokeObjectURL(objectUrl), 10000);
+                toast.textContent = "文件已开始下载";
+                setTimeout(() => toast.remove(), 2000);
+
+            } catch (e) {
+                toast.style.background = "#d93025";
+                toast.textContent = "无法下载: " + e.message;
+                setTimeout(() => toast.remove(), 3000);
+            }
+        }
+
+        function appendMessage(role, html) {
+            const stream = document.getElementById('chat-stream');
+            const id = 'msg-' + Date.now();
+            const div = document.createElement('div');
+            div.className = 'message-row';
+            
+            // 专业的 SVG 头像
+            let avatarHtml = '';
+            if (role === 'ai') {
+                // 机器人图标
+                avatarHtml = `<div class="avatar ai"><svg viewBox="0 0 24 24" fill="none" stroke="#4285F4" stroke-width="2"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M8 14h.01"/><path d="M16 14h.01"/><path d="M12 18h.01"/></svg></div>`;
+            } else {
+                // 用户图标
+                avatarHtml = `<div class="avatar user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`;
+            }
+
+            // 内容区域 (注意增加了 markdown-content 类)
+            div.innerHTML = `
+                ${avatarHtml}
+                <div class="bubble" id="${id}">
+                    <div class="markdown-content">${html}</div>
+                </div>`;
+            
+            stream.appendChild(div);
+            scrollToBottom();
+            return id;
+        }
+
+        function scrollToBottom() {
+            const stream = document.getElementById('chat-stream');
+            stream.scrollTop = stream.scrollHeight;
+        }
+    </script>
+</body>
+</html>
