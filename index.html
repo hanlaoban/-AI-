@@ -98,18 +98,23 @@
         .avatar.user { background: linear-gradient(135deg, #6A11CB 0%, #2575FC 100%); color: white; }
         .avatar svg { width: 22px; height: 22px; }
 
-        .bubble { flex: 1; padding-top: 2px; line-height: 1.7; font-size: 15px; color: #333; min-width: 0; }
+        /* 气泡容器 */
+        .bubble { flex: 1; padding-top: 2px; line-height: 1.7; font-size: 15px; color: #333; min-width: 0; display: flex; flex-direction: column; }
         
-        /* Markdown 样式 */
-        .bubble h1, .bubble h2, .bubble h3 { margin-top: 10px; margin-bottom: 5px; color: #202124; font-size: 16px; font-weight: 700; }
-        .bubble p { margin-bottom: 10px; }
-        .bubble ul, .bubble ol { padding-left: 20px; margin-bottom: 10px; }
-        .bubble li { margin-bottom: 4px; }
-        .bubble strong { color: var(--primary-color); font-weight: 600; }
-        .bubble code { background: #f1f3f4; padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
-        .bubble pre { background: #f6f8fa; padding: 10px; border-radius: 8px; overflow-x: auto; }
+        /* Markdown 文本区域 */
+        .markdown-content {
+            order: 2; /* 确保文本在案例下面 (虽然HTML顺序也是这样，但双重保险) */
+            margin-top: 5px;
+        }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 { margin-top: 10px; margin-bottom: 5px; color: #202124; font-size: 16px; font-weight: 700; }
+        .markdown-content p { margin-bottom: 10px; }
+        .markdown-content ul, .markdown-content ol { padding-left: 20px; margin-bottom: 10px; }
+        .markdown-content li { margin-bottom: 4px; }
+        .markdown-content strong { color: var(--primary-color); font-weight: 600; }
+        .markdown-content code { background: #f1f3f4; padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+        .markdown-content pre { background: #f6f8fa; padding: 10px; border-radius: 8px; overflow-x: auto; }
 
-        /* --- 引用角标美化 (可点击) --- */
+        /* --- 引用角标 (可点击) --- */
         .cite-tag {
             display: inline-flex; align-items: center; justify-content: center;
             vertical-align: super; font-size: 10px; font-weight: bold;
@@ -122,51 +127,62 @@
         }
         .cite-tag:hover { opacity: 1; transform: translateY(-4px) scale(1.1); box-shadow: 0 2px 4px rgba(66,133,244,0.3); }
 
-        /* --- 案例卡片样式 --- */
+        /* --- 案例卡片容器 (置顶样式) --- */
+        .ref-placeholder {
+            order: 1; /* Flex排序：在最上面 */
+            width: 100%;
+        }
+        
         .reference-box {
-            margin-top: 25px; padding-top: 20px; border-top: 1px dashed #e0e0e0;
+            /* 现在的样式：放在上面，下面有分割线 */
+            margin-bottom: 20px; 
+            padding-bottom: 15px; 
+            border-bottom: 1px dashed #e0e0e0;
             animation: fadeIn 0.5s;
         }
-        .ref-title { font-size: 14px; font-weight: 700; color: #1a73e8; margin-bottom: 15px; display: flex; align-items: center; gap: 6px; }
-        .ref-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+        
+        .ref-title { font-size: 13px; font-weight: 700; color: #1a73e8; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        
+        /* 网格布局 */
+        .ref-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+        
         .case-card {
-            background: #fff; border: 1px solid #e0e0e0; border-radius: 12px;
-            padding: 16px; display: flex; flex-direction: column; gap: 10px;
+            background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
+            padding: 12px; display: flex; flex-direction: column; gap: 8px;
             cursor: pointer; transition: all 0.3s ease; position: relative; 
             text-decoration: none; box-shadow: 0 2px 6px rgba(0,0,0,0.02);
             height: 100%; box-sizing: border-box;
         }
         .case-card:hover {
             border-color: var(--primary-color); background: #F8F9FE;
-            box-shadow: 0 8px 16px rgba(66, 133, 244, 0.1); transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(66, 133, 244, 0.1); transform: translateY(-2px);
         }
-        /* 高亮闪烁动画 */
         .case-card.highlight {
             border-color: #EA4335;
             box-shadow: 0 0 15px rgba(234, 67, 53, 0.4);
             transform: scale(1.02);
         }
-
         .case-header { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #5f6368; }
         .case-icon-box {
-            width: 32px; height: 32px; border-radius: 8px; 
+            width: 28px; height: 28px; border-radius: 6px; 
             display: flex; align-items: center; justify-content: center; 
-            font-size: 16px; font-weight: bold; flex-shrink: 0;
+            font-size: 14px; font-weight: bold; flex-shrink: 0;
         }
         .case-icon-box.pdf { background: #FFEBEE; color: #D32F2F; }
         .case-icon-box.doc { background: #E3F2FD; color: #1976D2; }
+        
         .case-name { 
-            font-size: 14px; font-weight: 600; color: #202124; line-height: 1.4; 
+            font-size: 13px; font-weight: 600; color: #202124; line-height: 1.4; 
             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-            min-height: 40px; 
+            min-height: 36px; 
         }
         .case-snippet {
-            font-size: 12px; color: #5f6368; line-height: 1.6;
-            background: #f1f3f4; padding: 8px; border-radius: 6px;
-            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+            font-size: 11px; color: #5f6368; line-height: 1.5;
+            background: #f1f3f4; padding: 6px; border-radius: 4px;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
             margin-top: auto;
         }
-        .case-footer { font-size: 11px; color: #9aa0a6; text-align: right; margin-top: 4px; }
+        .case-footer { font-size: 10px; color: #9aa0a6; text-align: right; margin-top: 2px; }
 
         /* 弹窗通用样式 */
         .modal-overlay {
@@ -305,7 +321,7 @@
             setTimeout(()=>el.style.display = 'none', 200);
         }
 
-        // --- 核心：点击角标跳转功能 ---
+        // --- 点击角标跳转功能 (向上滚动) ---
         window.scrollToReference = function(index) {
             const el = document.getElementById('ref-item-' + index);
             if(el) {
@@ -314,8 +330,6 @@
                 // 增加高亮闪烁效果
                 el.classList.add('highlight');
                 setTimeout(() => el.classList.remove('highlight'), 1500);
-            } else {
-                console.log("未找到引用卡片 ID:", 'ref-item-' + index);
             }
         };
 
@@ -327,19 +341,16 @@
         }
         function handleKey(e) { if(e.key === 'Enter') sendMessage(); }
 
-        // --- 增加 retryCount 参数支持自动重试 ---
         async function sendMessage(retryCount = 0) {
             const input = document.getElementById('user-input');
-            const text = input.value.trim() || input.getAttribute('data-last-msg'); // 支持重试时获取旧文本
+            const text = input.value.trim() || input.getAttribute('data-last-msg'); 
             
             if(!text) return;
             if(!config.apiKey || !config.chatId) { openConfigModal(); return; }
 
-            // 如果是第一次发送（非重试），保存文本并清空输入框
             if (retryCount === 0) {
                 input.setAttribute('data-last-msg', text);
                 input.value = '';
-                
                 if(!isChatting) {
                     document.getElementById('app-container').classList.add('chat-mode');
                     isChatting = true;
@@ -347,10 +358,11 @@
                 appendMessage('user', text);
             }
 
-            // 创建AI气泡（默认隐藏，防止空泡）
             const msgId = appendMessage('ai', '', true); 
             const msgRow = document.getElementById(msgId).parentElement;
             const bubble = document.querySelector(`#${msgId} .markdown-content`);
+            // --- 核心修改：引用容器不再是动态插入，而是预置在顶部 ---
+            // 通过 renderReferences 填充这个ID的内容
             let references = null;
             let fullText = "";
 
@@ -396,12 +408,11 @@
                                     if(fullText && fullText.trim().length > 0) {
                                         msgRow.classList.remove('hidden'); 
                                         
-                                        // --- 核心：渲染可点击的跳转角标 ---
-                                        // onclick="scrollToReference(数字)"
+                                        // 渲染可点击的跳转角标 (向上)
                                         let formattedText = fullText.replace(/\[ID:(\d+)\]/g, (match, idStr) => {
-                                            const num = parseInt(idStr) + 1; // 显示 1, 2, 3
-                                            const refIndex = parseInt(idStr); // 索引 0, 1, 2
-                                            return `<sup class="cite-tag" title="点击跳转至来源 ${num}" onclick="scrollToReference(${refIndex})">${num}</sup>`;
+                                            const num = parseInt(idStr) + 1; 
+                                            const refIndex = parseInt(idStr); 
+                                            return `<sup class="cite-tag" title="查看来源 ${num}" onclick="scrollToReference(${refIndex})">${num}</sup>`;
                                         });
 
                                         bubble.innerHTML = marked.parse(formattedText);
@@ -417,20 +428,19 @@
                 }
 
                 // --- 自动重试逻辑 ---
-                // 如果整个流结束了，fullText 还是空的，说明遇到“空开场白”问题
-                // 且 retryCount < 1 防止死循环
                 if ((!fullText || fullText.trim().length === 0) && retryCount < 1) {
-                    console.log("检测到空回复（可能是开场白），尝试自动重发...");
-                    msgRow.remove(); // 移除那个空的占位
-                    sendMessage(retryCount + 1); // 带着 session_id 再次发送
-                    return; // 结束当前执行
+                    console.log("检测到空回复，尝试自动重发...");
+                    msgRow.remove(); 
+                    sendMessage(retryCount + 1); 
+                    return; 
                 }
                 
-                // 如果不是空的，或者是第二次了但还是空，正常处理
                 if (!fullText || fullText.trim().length === 0) {
                     msgRow.remove();
                 } else if (references && references.doc_aggs) {
-                    renderReferences(document.querySelector(`#${msgId}`), references);
+                    // --- 渲染引用到顶部 ---
+                    // 这里传入 msgId，函数内部会去找 .ref-placeholder
+                    renderReferences(msgId, references);
                 }
 
             } catch (error) {
@@ -439,18 +449,22 @@
             }
         }
 
-        function renderReferences(msgContainer, refs) {
+        // --- 核心修改：渲染到顶部的 ref-placeholder ---
+        function renderReferences(msgId, refs) {
             const docs = refs.doc_aggs;
             const chunks = refs.chunks || {};
             if (!docs || Object.keys(docs).length === 0) return;
 
+            // 找到气泡内的占位符
+            const container = document.querySelector(`#${msgId} .ref-placeholder`);
+            if(!container) return;
+
             let html = `
                 <div class="reference-box">
-                    <div class="ref-title">📚 推荐案例与资源</div>
+                    <div class="ref-title">📚 知识来源 (参考案例)</div>
                     <div class="ref-list">
             `;
             
-            // 使用索引 index 来生成 ID
             let index = 0;
             for (let key in docs) {
                 const doc = docs[key];
@@ -476,7 +490,6 @@
                 const safeDocName = doc.doc_name.replace(/"/g, '&quot;');
                 const safeContent = encodeURIComponent(fullContentHtml);
 
-                // --- 给卡片增加 ID: ref-item-0, ref-item-1 ---
                 html += `
                     <div class="case-card" id="ref-item-${index}" onclick="openContentModal('${safeDocName}', decodeURIComponent('${safeContent}'), '${fileType}')">
                         <div class="case-header">
@@ -485,14 +498,15 @@
                         </div>
                         <div class="case-name">${doc.doc_name}</div>
                         <div class="case-snippet">${previewSnippet}</div>
-                        <div class="case-footer">${doc.count} 个相关片段</div>
+                        <div class="case-footer">${doc.count} 个片段</div>
                     </div>`;
                 
-                index++; // 索引增加
+                index++;
             }
             html += `</div></div>`;
-            msgContainer.insertAdjacentHTML('beforeend', html);
-            scrollToBottom();
+            
+            // 直接填充 HTML，而不是 append
+            container.innerHTML = html;
         }
 
         function appendMessage(role, html, isHidden = false) {
@@ -508,10 +522,11 @@
                 avatarHtml = `<div class="avatar user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`;
             }
 
+            // --- 核心结构变化：增加 .ref-placeholder 在 content 之前 ---
             div.innerHTML = `
                 ${avatarHtml}
                 <div class="bubble" id="${id}">
-                    <div class="markdown-content">${html}</div>
+                    <div class="ref-placeholder"></div> <div class="markdown-content">${html}</div>
                 </div>`;
             
             stream.appendChild(div);
